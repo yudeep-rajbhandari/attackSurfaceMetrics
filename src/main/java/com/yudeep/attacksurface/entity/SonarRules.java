@@ -1,8 +1,22 @@
 package com.yudeep.attacksurface.entity;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class SonarRules {
 private String key;
 private String name;
+    Map<String,List<String>> title = new HashMap<>();
+
+    public Map<String,List<String>> getTitle() {
+        return title;
+    }
+
+    public void setTitle(Map<String,List<String>> title) {
+        this.title = title;
+    }
 
     public String getKey() {
         return key;

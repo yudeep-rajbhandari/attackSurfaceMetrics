@@ -1,10 +1,14 @@
 package com.yudeep.attacksurface.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 public class Sonar {
+    @JsonProperty("total")
     private Integer total;
-    private List<SonarIssues> sonarIssues;
+    @JsonProperty("issues")
+    private List<SonarIssues> issues;
 
     public Integer getTotal() {
         return total;
@@ -15,10 +19,10 @@ public class Sonar {
     }
 
     public List<SonarIssues> getSonarIssues() {
-        return sonarIssues;
+        return issues;
     }
 
     public void setSonarIssues(List<SonarIssues> sonarIssues) {
-        this.sonarIssues = sonarIssues;
+        this.issues = sonarIssues;
     }
 }
