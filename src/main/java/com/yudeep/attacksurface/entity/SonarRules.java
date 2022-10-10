@@ -10,6 +10,26 @@ private String key;
 private String name;
     Map<String,List<String>> title = new HashMap<>();
 
+    List<String> CVEList = new ArrayList<>();
+
+    public List<String> getCVEList() {
+        return CVEList;
+    }
+
+    public void setCVEList(List<String> CVEList) {
+        this.CVEList = CVEList;
+    }
+
+    public String getEffectiveCWE() {
+        return effectiveCWE;
+    }
+
+    public void setEffectiveCWE(String effectiveCWE) {
+        this.effectiveCWE = effectiveCWE;
+    }
+
+    public String effectiveCWE;
+
     public Map<String,List<String>> getTitle() {
         return title;
     }

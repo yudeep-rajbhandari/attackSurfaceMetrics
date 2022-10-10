@@ -20,7 +20,7 @@ public class SimilarityCalculator {
         Map<String, String> cweMap = new HashMap<>();
         String[] HEADERS = {"CWEID","Name","Weakness Abstraction","Status","Description","Extended Description","Related Weaknesses","Weakness Ordinalities","Applicable Platforms","Background Details","Alternate Terms","Modes Of Introduction","Exploitation Factors","Likelihood of Exploit","Common Consequences","Detection Methods","Potential Mitigations","Observed Examples","Functional Areas","Affected Resources","Taxonomy Mappings","Related Attack Patterns","Notes"};
         try {
-            Reader in = new FileReader("src/main/resources/csv/JavaCWE.csv");
+            Reader in = new FileReader("src/main/resources/csv/softwareCWE.csv");
             Iterable<CSVRecord> records = CSVFormat.DEFAULT
                     .withHeader(HEADERS)
                     .withFirstRecordAsHeader()

@@ -60,4 +60,31 @@ public class Mapper {
         return owaspMap;
     }
 
+
+    public Map<String, List<String>> getCVEList() throws IOException {
+        Map<String, List<String>> owaspMap = new HashMap<>();
+        String[] HEADERS = {"CWEID","CVE-ID"};
+        Reader in = new FileReader("src/main/resources/csv/Global_Dataset.csv");
+        Iterable<CSVRecord> records = CSVFormat.DEFAULT
+                .withHeader(HEADERS)
+                .withFirstRecordAsHeader()
+                .parse(in);
+        for (CSVRecord record : records) {
+            String owasp = record.get("CWEID");
+            String cweId = record.get("CVE-ID");
+            if(owaspMap.containsKey(owasp)){
+                List<String> cwes = owaspMap.get(owasp);
+                cwes.add(cweId);
+                owaspMap.put(owasp,cwes);
+            }
+            else {
+                List<String> cwes = new ArrayList<>();
+                cwes.add(cweId);
+                owaspMap.put(owasp,cwes);
+            }
+
+        }
+        return owaspMap;
+    }
+
 }
