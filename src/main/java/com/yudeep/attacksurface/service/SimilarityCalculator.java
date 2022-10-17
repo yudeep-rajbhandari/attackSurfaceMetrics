@@ -6,21 +6,21 @@ import org.springframework.stereotype.Service;
 import similarity.TextSimilarity;
 
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.Reader;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
 public class SimilarityCalculator {
 
 
-    private Map<String, String> getAllCSV(){
+    private Map<String, String> getAllCSV() {
         Map<String, String> cweMap = new HashMap<>();
         String[] HEADERS = {"CWEID","Name","Weakness Abstraction","Status","Description","Extended Description","Related Weaknesses","Weakness Ordinalities","Applicable Platforms","Background Details","Alternate Terms","Modes Of Introduction","Exploitation Factors","Likelihood of Exploit","Common Consequences","Detection Methods","Potential Mitigations","Observed Examples","Functional Areas","Affected Resources","Taxonomy Mappings","Related Attack Patterns","Notes"};
-        try {
-            Reader in = new FileReader("src/main/resources/csv/softwareCWE.csv");
+
+        try (Reader in = new FileReader("src/main/resources/csv/softwareCWE.csv");){
+
             Iterable<CSVRecord> records = CSVFormat.DEFAULT
                     .withHeader(HEADERS)
                     .withFirstRecordAsHeader()
@@ -33,7 +33,7 @@ public class SimilarityCalculator {
             }
         }
         catch (Exception e){
-
+            return cweMap;
         }
        return cweMap;
     }
@@ -44,7 +44,6 @@ public class SimilarityCalculator {
         for (String s:getAllJava.keySet()){
             ts.addDocument(s,getAllJava.get(s));
         }
-//        ts.calculate();
         return ts;
     }
 }

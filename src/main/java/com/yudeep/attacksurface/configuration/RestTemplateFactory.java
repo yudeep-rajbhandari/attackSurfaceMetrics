@@ -14,6 +14,6 @@ public class RestTemplateFactory {
     }
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder.basicAuthentication("squ_141e863f73cab61ecb311f09d532193023bec33e","").build();
+        return builder.basicAuthentication("sqp_5665113ab7ceccd314e10e6bf7919a1ba7afc019","").build();
     }
 }

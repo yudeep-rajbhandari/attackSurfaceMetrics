@@ -2,7 +2,6 @@ package com.yudeep.attacksurface.configuration;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import java.io.FileReader;
@@ -16,26 +15,12 @@ import java.util.Map;
 @Service
 public class Mapper {
 
-    private static final Map<String, String> tensNumberConversion_internal = new HashMap<String, String>()
-    {
-        {
-            put("A01", "CWE-1345");
-            put("A02", "CWE-1346");
-            put("A03", "CWE-1347");
-            put("A04", "CWE-1348");
-            put("A05", "CWE-1349");
-            put("A06", "CWE-1352");
-            put("A07", "CWE-1353");
-            put("A08", "CWE-1354");
-            put("A09", "CWE-1355");
-            put("A10", "CWE-1356");
-        };
-    };
+    private static final String CWEID = "CWEID";
 
 
     public Map<String, List<String>> getOWASPList() throws IOException {
         Map<String, List<String>> owaspMap = new HashMap<>();
-        String[] HEADERS = {"CWEID","OWASP","Name","Weakness Abstraction","Status","Description","Extended Description","Related Weaknesses","Weakness Ordinalities","Applicable Platforms","Background Details","Alternate Terms","Modes Of Introduction","Exploitation Factors","Likelihood of Exploit","Common Consequences","Detection Methods","Potential Mitigations","Observed Examples","Functional Areas","Affected Resources","Taxonomy Mappings","Related Attack Patterns","Notes"};
+        String[] HEADERS = {CWEID,"OWASP","Name","Weakness Abstraction","Status","Description","Extended Description","Related Weaknesses","Weakness Ordinalities","Applicable Platforms","Background Details","Alternate Terms","Modes Of Introduction","Exploitation Factors","Likelihood of Exploit","Common Consequences","Detection Methods","Potential Mitigations","Observed Examples","Functional Areas","Affected Resources","Taxonomy Mappings","Related Attack Patterns","Notes"};
 
         Reader in = new FileReader("src/main/resources/csv/1344.csv");
         Iterable<CSVRecord> records = CSVFormat.DEFAULT
@@ -44,7 +29,7 @@ public class Mapper {
                 .parse(in);
         for (CSVRecord record : records) {
             String owasp = record.get("OWASP");
-            String cweId = record.get("CWEID");
+            String cweId = record.get(CWEID);
             if(owaspMap.containsKey(owasp)){
                 List<String> cwes = owaspMap.get(owasp);
                 cwes.add(cweId);
@@ -63,14 +48,14 @@ public class Mapper {
 
     public Map<String, List<String>> getCVEList() throws IOException {
         Map<String, List<String>> owaspMap = new HashMap<>();
-        String[] HEADERS = {"CWEID","CVE-ID"};
+        String[] HEADERS = {CWEID,"CVE-ID"};
         Reader in = new FileReader("src/main/resources/csv/Global_Dataset.csv");
         Iterable<CSVRecord> records = CSVFormat.DEFAULT
                 .withHeader(HEADERS)
                 .withFirstRecordAsHeader()
                 .parse(in);
         for (CSVRecord record : records) {
-            String owasp = record.get("CWEID");
+            String owasp = record.get(CWEID);
             String cweId = record.get("CVE-ID");
             if(owaspMap.containsKey(owasp)){
                 List<String> cwes = owaspMap.get(owasp);

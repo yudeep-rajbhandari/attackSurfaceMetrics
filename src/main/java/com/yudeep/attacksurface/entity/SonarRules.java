@@ -11,6 +11,44 @@ private String name;
     Map<String,List<String>> title = new HashMap<>();
 
     List<String> CVEList = new ArrayList<>();
+    List<Consequence> consequenceList = new ArrayList<>();
+    Integer consequencScore = 1;
+
+    Double cveScore = 1.0;
+
+    Double score = 0.0;
+
+    public Double getScore() {
+        return score;
+    }
+
+    public void setScore(Double score) {
+        this.score = score;
+    }
+
+    public Double getCveScore() {
+        return cveScore;
+    }
+
+    public void setCveScore(Double cveScore) {
+        this.cveScore = cveScore;
+    }
+
+    public Integer getConsequencScore() {
+        return consequencScore;
+    }
+
+    public void setConsequencScore(Integer consequencScore) {
+        this.consequencScore = consequencScore;
+    }
+
+    public List<Consequence> getConsequenceList() {
+        return consequenceList;
+    }
+
+    public void setConsequenceList(List<Consequence> consequenceList) {
+        this.consequenceList = consequenceList;
+    }
 
     public List<String> getCVEList() {
         return CVEList;
