@@ -10,7 +10,7 @@ private String key;
 private String name;
     Map<String,List<String>> title = new HashMap<>();
 
-    List<String> CVEList = new ArrayList<>();
+    List<String> cveList = new ArrayList<>();
     List<Consequence> consequenceList = new ArrayList<>();
     Integer consequencScore = 1;
 
@@ -51,11 +51,11 @@ private String name;
     }
 
     public List<String> getCVEList() {
-        return CVEList;
+        return cveList;
     }
 
-    public void setCVEList(List<String> CVEList) {
-        this.CVEList = CVEList;
+    public void setCVEList(List<String> cveList) {
+        this.cveList = cveList;
     }
 
     public String getEffectiveCWE() {

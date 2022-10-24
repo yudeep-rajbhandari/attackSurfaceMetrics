@@ -3,6 +3,7 @@ package com.yudeep.attacksurface.controller;
 import com.yudeep.attacksurface.entity.CVEScore;
 import com.yudeep.attacksurface.entity.Consequence;
 import com.yudeep.attacksurface.entity.SonarRules;
+import com.yudeep.attacksurface.service.ApiService;
 import com.yudeep.attacksurface.service.MetricsCalculator;
 import com.yudeep.attacksurface.service.SonarService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,33 +24,30 @@ public class SuperController {
     @Autowired
     private MetricsCalculator metricsCalculator;
 
+    @Autowired
+    private ApiService apiService;
+
     @GetMapping("/getAllIssues")
     public List<SonarRules> process(){
-
-        List<SonarRules>  sonarIssues=   sonarService.calculate();
-        return sonarIssues;
+        return    sonarService.calculate();
     }
 
     @GetMapping("/getOWASP")
     public List<String> process(@RequestParam String owasp){
-
-        List<String>  owaspList=   sonarService.getAllOwasps(owasp);
-        return owaspList;
+        return sonarService.getAllOwasps(owasp);
     }
     @GetMapping("/consequence")
     public Integer consequence(@RequestParam String owasp){
 
-        Consequence[] owaspList=   sonarService.getCWEConsequence(owasp);
+        Consequence[] owaspList=   apiService.getCWEConsequence(owasp);
         List<Consequence> consequenceList = new ArrayList<>();
         consequenceList.addAll(Arrays.asList(owaspList));
-        int j = metricsCalculator.getConsequenceScore(consequenceList);
-        return j;
+        return metricsCalculator.getConsequenceScore(consequenceList);
+
     }
 
     @GetMapping("/cve")
     public CVEScore cve(@RequestParam String owasp){
-
-        CVEScore j = metricsCalculator.getCVE(owasp);
-        return j;
+        return metricsCalculator.getCVE(owasp);
     }
 }

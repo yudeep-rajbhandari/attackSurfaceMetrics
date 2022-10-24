@@ -6,10 +6,10 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 @JsonRootName("attr")
 public class Nature {
     @JsonProperty("@_Nature")
-    String Nature;
+    String nature1;
 
     @JsonProperty("@_CWE_ID")
-    String CWEID;
+    String cweID;
     @JsonProperty("@_View_ID")
     String ViewID;
 
@@ -25,19 +25,19 @@ public class Nature {
     }
 
     public String getNature() {
-        return Nature;
+        return nature1;
     }
 
     public void setNature(String nature) {
-        Nature = nature;
+        this.nature1 = nature;
     }
 
     public String getCWEID() {
-        return CWEID;
+        return cweID;
     }
 
-    public void setCWEID(String CWEID) {
-        this.CWEID = CWEID;
+    public void setCWEID(String cweID) {
+        this.cweID = cweID;
     }
 
     public String getViewID() {

@@ -4,6 +4,7 @@ import com.yudeep.attacksurface.entity.CVEScore;
 import com.yudeep.attacksurface.entity.Consequence;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -14,7 +15,6 @@ import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.annotation.PostConstruct;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,9 +22,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class MetricsCalculator {
-    List<String> executeSynonym  = new ArrayList<>();
-    List<String> readSynonym  = new ArrayList<>();
-    List<String> modifySynonym  = new ArrayList<>();
     Map<String,Integer> accessComplexityMapper = new HashMap<>();
     Map<String,Integer> authenticationMapper = new HashMap<>();
 
@@ -32,11 +29,12 @@ public class MetricsCalculator {
 
 
     @Autowired
+    @Qualifier(value = "restbuilder")
     private RestTemplate restTemplate;
 
 
     @PostConstruct
-    private void SetSynonym(){
+    private void setSynonym(){
         accessComplexityMapper.put("HIGH",10);
         accessComplexityMapper.put("MEDIUM",7);
         accessComplexityMapper.put("LOW",4);
@@ -57,45 +55,45 @@ public class MetricsCalculator {
         int finalScore = 0;
 
         for(Consequence consequence:consequenceList){
-            int CimpactScore =0;
-            int IimpactScore =0;
-            int AimpactScore=0;
-            int OimpactScore=0;
-            int C=0;
-            int I=0;
-            int A=0;
-            int O=0;
+            int conImpactScore =0;
+            int integrityImpactScore =0;
+            int availImpactScore=0;
+            int otherImpactScore=0;
+            int c=0;
+            int i=0;
+            int a=0;
+            int o=0;
             if(consequence.getScope().contains("Confidentiality")){
-               CimpactScore =  getImpact(consequence.getImpact());
-               C=1;
+                conImpactScore =  getImpact(consequence.getImpact());
+               c=1;
             }
             if(consequence.getScope().contains("Integrity")){
-                IimpactScore =  getImpact(consequence.getImpact());
-                I=1;
+                integrityImpactScore =  getImpact(consequence.getImpact());
+                i=1;
             }
             if(consequence.getScope().contains("Availability")){
-                AimpactScore =  getImpact(consequence.getImpact());
-                A=1;
+                availImpactScore =  getImpact(consequence.getImpact());
+                a=1;
             }
-            if(C==0 && I==0 && A ==0){
-                OimpactScore =  1;
-                O=1;
+            if(c==0 && i==0 && a ==0){
+                otherImpactScore =  getImpact(consequence.getImpact());
+                o=1;
             }
-            int ConsequenceScore = C * CimpactScore + I * IimpactScore + A * AimpactScore + O*OimpactScore;
-            finalScore = finalScore + ConsequenceScore;
+            int consequenceScore = c * conImpactScore + i * integrityImpactScore + a * availImpactScore + o *otherImpactScore;
+            finalScore = finalScore + consequenceScore;
 
         }
         return finalScore;
 
     }
     public int getImpact(List<String> impact){
-        if(impact.stream().filter(i->i.contains("read") || i.contains("Read")).collect(Collectors.toList()).size() >0){
+        if(!impact.stream().filter(i->i.contains("read") || i.contains("Read")).collect(Collectors.toList()).isEmpty()){
             return 4;
         }
-        if(impact.stream().filter(i->i.contains("modify") || i.contains("Modify")).collect(Collectors.toList()).size() >0){
+        if(!impact.stream().filter(i->i.contains("modify") || i.contains("Modify")).collect(Collectors.toList()).isEmpty()){
             return 7;
         }
-        if(impact.stream().filter(i->i.contains("execute") || i.contains("Execute") || i.contains("Dos")).collect(Collectors.toList()).size() >0){
+        if(!impact.stream().filter(i->i.contains("execute") || i.contains("Execute") || i.contains("Dos")).collect(Collectors.toList()).isEmpty()){
             return 10;
         }
         return 4;
@@ -103,14 +101,12 @@ public class MetricsCalculator {
     public CVEScore getCVE(String id){
         try{
             HttpHeaders headers = new HttpHeaders();
-            headers.add("apiKey","b835f28c-2145-4cb6-aa14-ea0fd15e8c8f");
-            HttpEntity requestEntity = new HttpEntity<>(headers);
-            UriComponents builder = UriComponentsBuilder.fromHttpUrl("https://services.nvd.nist.gov/rest/json/cves/2.0?cveId="+id).buildAndExpand();
+            HttpEntity<String> requestEntity = new HttpEntity<>(headers);
+            UriComponents builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8000/api/cve/"+id).buildAndExpand();
             ResponseEntity<String> rules = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,requestEntity, String.class);
             JSONObject object = new JSONObject(rules.getBody());
-            JSONObject newObj = object.getJSONArray("vulnerabilities").getJSONObject(0).getJSONObject("cve").getJSONObject("metrics").getJSONArray("cvssMetricV2").getJSONObject(0).getJSONObject("cvssData");
-            CVEScore cveScore = new CVEScore(newObj.getString("accessComplexity"), newObj.getString("authentication") );
-            return cveScore;
+            JSONObject newObj = object.getJSONObject("raw_nvd_data").getJSONObject("impact").getJSONObject("baseMetricV2").getJSONObject("cvssV2");
+            return new CVEScore(newObj.getString("accessComplexity"), newObj.getString("authentication") );
         }
         catch (Exception e){
             return null;
@@ -120,15 +116,15 @@ public class MetricsCalculator {
 
 
 
-    public int getAccessComplexityScore(String CVE){
-        return accessComplexityMapper.get(CVE);
+    public int getAccessComplexityScore(String cve){
+        return accessComplexityMapper.get(cve);
     }
 
-    public int getAuthenticationScore(String CVE){
-        return authenticationMapper.get(CVE);
+    public int getAuthenticationScore(String cve){
+        return authenticationMapper.get(cve);
     }
 
-    public int getSeverityScore(String Severity){
-        return severityMapper.get(Severity);
+    public int getSeverityScore(String severity){
+        return severityMapper.get(severity);
     }
 }

@@ -9,15 +9,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
-import similarity.TextSimilarity;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
@@ -29,10 +21,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class SonarService {
-
-    @Autowired
-    private RestTemplate restTemplate;
-
     @Autowired
     private Mapper mapper;
 
@@ -40,16 +28,24 @@ public class SonarService {
     private SimilarityCalculator similarityCalculator;
 
     @Autowired
+    private ApiService apiService;
+
+    @Autowired
     private MetricsCalculator metricsCalculator;
-    Map<String, List<String>> stringListMap = new HashMap<>();
-    private static final String OWASP = "owasp";
+
     private final static Logger LOGGER =
             Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+    Map<String, List<String>> stringListMap = new HashMap<>();
+
+    Map<String, String> cveDescMap = new HashMap<>();
+    private static final String OWASP = "owasp";
+
 
     @PostConstruct
     private void populate(){
         try {
             stringListMap =   mapper.getCVEList();
+            cveDescMap = mapper.getCVEDesc();
 
         }
         catch (Exception e){
@@ -60,11 +56,11 @@ public class SonarService {
     public List<SonarRules> calculate(){
         Map<String,Integer> sonarCount = null;
         List<String> tags = Arrays.asList(new String[]{"cert", "cwe", OWASP});
-        List<SonarIssues> issues = getAllIssues();
+        List<SonarIssues> issues = apiService.getAllIssues();
         List<SonarIssues> filteredIssue = issues.stream().filter(i->tags.stream().anyMatch(i.getTags()::contains)).collect(Collectors.toList());
         List<SonarRules> sonarRules = new ArrayList<>();
         for(SonarIssues sonarIssues:filteredIssue){
-            SonarRuleWrapper wrapper =  getSonarRules(sonarIssues.getRule());
+            SonarRuleWrapper wrapper =  apiService.getSonarRules(sonarIssues.getRule());
             if(wrapper !=null){
                 SonarRules sonarRules1 = wrapper.getRulesList().get(0);
                 Map<String,List<String>> aa= scrapper(sonarRules1.getHtmlDesc());
@@ -81,13 +77,9 @@ public class SonarService {
         scoreCVE(uniqueSonarRules);
 
         double finalScore = finalScoreCalculation(uniqueSonarRules,sonarCount);
-        LOGGER.log(Level.INFO,"final Score "+finalScore);
 
+        LOGGER.log(Level.INFO,() -> String.format("Final Score %1$s", finalScore));
 
-        TextSimilarity textSimilarity = similarityCalculator.calculateSimilarity();
-        textSimilarity.addDocument("new",sonarRules.get(0).getName());
-        textSimilarity.calculate();
-        List<String> sim = textSimilarity.getSimilarDocuments("new",10);
         return uniqueSonarRules;
     }
 
@@ -111,7 +103,7 @@ public class SonarService {
     private Map<String, Integer> rulesToMap(List<SonarRules> sonarRules) {
         Map<String,Integer> sonarCount = new HashMap<>();
         for(SonarRules sonarRules1:sonarRules){
-            if(sonarCount.keySet().stream().filter(j->j.equals(sonarRules1.getKey())).collect(Collectors.toList()).size() >0){
+            if(!sonarCount.keySet().stream().filter(j->j.equals(sonarRules1.getKey())).collect(Collectors.toList()).isEmpty()){
                 sonarCount.put(sonarRules1.getKey(),sonarCount.get(sonarRules1.getKey())+1);
             }
             else {
@@ -127,25 +119,22 @@ public class SonarService {
             if(sonarRules1.getCVEList() !=null && !sonarRules1.getCVEList().isEmpty()){
                 List<String> cveList = new ArrayList<>();
                 if(sonarRules1.getCVEList().size() >5){
-                     cveList.addAll(sonarRules1.getCVEList().subList(0,4));
+                    List<String> cveLi = getCVEList(sonarRules1.getCVEList(),sonarRules1.getName());
+                     cveList.addAll(cveLi);
                 }
                 else {
                     cveList.addAll(sonarRules1.getCVEList());
                 }
                 Double allScore = 0.0;
                 for(String s:cveList){
-                    System.out.println(p);
-                    p++;
                     CVEScore cveScore = metricsCalculator.getCVE(s);
                     try {
                         Integer i = metricsCalculator.getAccessComplexityScore(cveScore.getAccessComplexity())* metricsCalculator.getAuthenticationScore(cveScore.getAuthentication());
                         allScore = allScore+i;
                     }
                     catch (Exception e){
-                        LOGGER.log(Level.SEVERE,e.getMessage());
+                        LOGGER.log(Level.SEVERE,() -> String.format(" %1$s", e.getMessage()));
                     }
-
-
                 }
                 allScore = allScore/cveList.size();
                 sonarRules1.setCveScore(allScore);
@@ -153,18 +142,27 @@ public class SonarService {
         }
     }
 
+    private List<String> getCVEList(List<String> cveList, String name) {
+        Map<String,String> cveMap = new HashMap<>();
+        for (String s:cveList){
+            cveMap.put(s,cveDescMap.get(s));
+        }
+        return similarityCalculator.getSimilarText(cveMap,name);
+    }
+
+
     private void calculateCWEConsequence(List<SonarRules> sonarRules) {
         for (SonarRules sonarRules1:sonarRules){
             List<Consequence> cweConsequence = new ArrayList<>();
 
             if(sonarRules1.getEffectiveCWE()==null){
                 if(sonarRules1.getTitle().get("cwe").size()==1 ) {
-                    cweConsequence = Arrays.asList(getCWEConsequence(sonarRules1.getTitle().get("cwe").get(0).split("-")[1]));
+                    cweConsequence = Arrays.asList(apiService.getCWEConsequence(sonarRules1.getTitle().get("cwe").get(0).split("-")[1]));
                 }
 
             }
             else {
-                cweConsequence = Arrays.asList(getCWEConsequence(sonarRules1.getEffectiveCWE()));
+                cweConsequence = Arrays.asList(apiService.getCWEConsequence(sonarRules1.getEffectiveCWE()));
             }
             sonarRules1.setConsequenceList(cweConsequence);
             int k = metricsCalculator.getConsequenceScore(cweConsequence);
@@ -177,9 +175,9 @@ public class SonarService {
     private void getRelatedCVEs(List<SonarRules> sonarRules) {
         for(SonarRules sonarRules1:sonarRules){
             String cwe = sonarRules1.getEffectiveCWE();
-            Parent parent1003 = getCWEParent1003(cwe);
+            Parent parent1003 = apiService.getCWEParent1003(cwe);
             if(parent1003 !=null){
-                JSONArray array = getObservedCVE(parent1003.getAttr().getCWEID());
+                JSONArray array = apiService.getObservedCVE(parent1003.getAttr().getCWEID());
                 for(int i = 0; i< array.length();i++){
                     JSONObject jsonObject = array.getJSONObject(i);
                     sonarRules1.getCVEList().add(jsonObject.get("Reference").toString());
@@ -192,7 +190,7 @@ public class SonarService {
                     sonarRules1.setCVEList(effectiveCVEs);
                 }
                 catch (Exception e){
-                   LOGGER.log(Level.SEVERE,e.getMessage());
+                    LOGGER.log(Level.SEVERE,() -> String.format("%1$s", e.getMessage()));
                 }
 
             }
@@ -234,10 +232,10 @@ public class SonarService {
 
             String id = cwe;
             List<String> parent = new ArrayList<>();
-            Parent a = getCWEParent(id);
+            Parent a = apiService.getCWEParent(id);
             while(a !=null){
                 parent.add(a.getAttr().getCWEID());
-                a = getCWEParent(a.getAttr().getCWEID());
+                a = apiService.getCWEParent(a.getAttr().getCWEID());
 
             }
             parentMap.put(id,parent);
@@ -247,7 +245,7 @@ public class SonarService {
     }
 
     private String getCommonParent(Map<String,List<String>> parentMap){
-        if(parentMap.keySet().size() <1){
+        if(parentMap.keySet().isEmpty()){
             return null;
         }
         if(parentMap.keySet().size() ==1){
@@ -265,90 +263,34 @@ public class SonarService {
         for(int i = 1;i< aa.size();i++){
             newa.retainAll(aa.get(1));
         }
-        return newa.size()>0?newa.get(0):null;
+        return !newa.isEmpty()?newa.get(0):null;
     }
-    public List<SonarIssues> getAllIssues(){
-        List<SonarIssues> issues = new ArrayList<>();
-        Sonar sonar = restTemplate.getForObject("http://localhost:9000/api/issues/search", Sonar.class);
-        if(sonar !=null){
-            issues.addAll(sonar.getSonarIssues());
 
-        }
-        return issues;
-    }
-    public  List<String> getAllOwasps(String Owasp){
+    public  List<String> getAllOwasps(String owasp){
         try {
             Map<String,List<String>> listMap = mapper.getOWASPList();
-            return listMap.get(Owasp);
+            return listMap.get(owasp);
         }
         catch (Exception e){
-           LOGGER.log(Level.SEVERE,e.getMessage());
+            LOGGER.log(Level.SEVERE,() -> String.format("%1$s", e.getMessage()));
+
         }
         return new ArrayList<>();
     }
-    private SonarRuleWrapper getSonarRules(String ruleName){
-        String url = "language={language}&rule_key={rule}";
-        Map<String, String> queryParamMap = new HashMap<>();
-        queryParamMap.put("language","Java");
-        queryParamMap.put("rule",ruleName);
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity requestEntity = new HttpEntity<>(headers);
-        UriComponents builder = UriComponentsBuilder.fromHttpUrl("http://localhost:9000/api/rules/search").query(url).buildAndExpand(queryParamMap);
-        ResponseEntity<SonarRuleWrapper> rules = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,requestEntity,SonarRuleWrapper.class);
-        return rules.getBody();
-    }
 
-    private Parent getCWEParent(String id){
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity requestEntity = new HttpEntity<>(headers);
-        UriComponents builder = UriComponentsBuilder.fromHttpUrl("http://localhost:5000/"+id).buildAndExpand();
-        ResponseEntity<Parent> rules = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,requestEntity,Parent.class);
-        return rules.getBody();
-    }
-
-    public Consequence[] getCWEConsequence(String id){
-        try{
-            HttpHeaders headers = new HttpHeaders();
-            HttpEntity requestEntity = new HttpEntity<>(headers);
-            UriComponents builder = UriComponentsBuilder.fromHttpUrl("http://localhost:5000/consequence/"+id).buildAndExpand();
-            ResponseEntity<Consequence[]> rules = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,requestEntity,Consequence[].class);
-            return rules.getBody();
-        }
-        catch (Exception e){
-            LOGGER.log(Level.SEVERE,e.getMessage());
-            return new Consequence[0];
-        }
-
-    }
-
-    private Parent getCWEParent1003(String id){
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity requestEntity = new HttpEntity<>(headers);
-        UriComponents builder = UriComponentsBuilder.fromHttpUrl("http://localhost:5000/cwe2/"+id).buildAndExpand();
-        ResponseEntity<Parent> rules = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,requestEntity,Parent.class);
-        return rules.getBody();
-    }
-
-    private JSONArray getObservedCVE(String id){
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity requestEntity = new HttpEntity<>(headers);
-        UriComponents builder = UriComponentsBuilder.fromHttpUrl("http://localhost:5000/observed/"+id).buildAndExpand();
-        ResponseEntity<String> rules = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,requestEntity,String.class);
-        return new JSONArray(rules.getBody());
-    }
 
 
     private Map<String,List<String>> scrapper(String html){
-        String regex_OWASP = "(?=(OWASP[^\\\\s<]+<))";
-        String regex_CWE = "(?=(CWE[^\\\\s<]+<))" ;
-        String regex_CERT = "(?=(CERT[^\\\\s<]+<))";
+        String regexOWASP = "(?=(OWASP[^\\\\s<]+<))";
+        String regexCWE = "(?=(CWE[^\\\\s<]+<))" ;
+        String regexCERT = "(?=(CERT[^\\\\s<]+<))";
         Map<String,List<String>> vunMap = new HashMap<>();
-        List<String> OWASPList = getMatchedString(regex_OWASP,html);
-        List<String> CWEList = getMatchedString(regex_CWE,html);
-        List<String> CertList = getMatchedString(regex_CERT,html);
-        vunMap.put(OWASP,OWASPList);
-        vunMap.put("cwe",CWEList);
-        vunMap.put("CertList",CertList);
+        List<String> owaspList = getMatchedString(regexOWASP,html);
+        List<String> cweList = getMatchedString(regexCWE,html);
+        List<String> certList = getMatchedString(regexCERT,html);
+        vunMap.put(OWASP,owaspList);
+        vunMap.put("cwe",cweList);
+        vunMap.put("CertList",certList);
         return vunMap;
 
 
@@ -377,7 +319,7 @@ public class SonarService {
         Set<String> emptyNames = new HashSet<String>();
         for(java.beans.PropertyDescriptor pd : pds) {
             Object srcValue = src.getPropertyValue(pd.getName());
-            if (srcValue == null) emptyNames.add(pd.getName());
+            if (srcValue == null) {emptyNames.add(pd.getName());}
         }
         String[] result = new String[emptyNames.size()];
         return emptyNames.toArray(result);
