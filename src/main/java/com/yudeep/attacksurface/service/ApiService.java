@@ -36,9 +36,9 @@ public class ApiService {
     private final static Logger LOGGER =
             Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
-    public List<SonarIssues> getAllIssues(){
+    public List<SonarIssues> getAllIssues(String target){
         List<SonarIssues> issues = new ArrayList<>();
-        Sonar sonar = restTemplate.getForObject(apiAddress+"/api/issues/search?componentKeys=test", Sonar.class);
+        Sonar sonar = restTemplate.getForObject(apiAddress+"/api/issues/search?componentKeys="+target, Sonar.class);
         if(sonar !=null){
             issues.addAll(sonar.getSonarIssues());
 

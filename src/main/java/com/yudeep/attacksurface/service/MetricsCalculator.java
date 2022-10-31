@@ -100,6 +100,7 @@ public class MetricsCalculator {
     }
     public CVEScore getCVE(String id){
         try{
+            System.out.println(id);
             HttpHeaders headers = new HttpHeaders();
             HttpEntity<String> requestEntity = new HttpEntity<>(headers);
             UriComponents builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8000/api/cve/"+id).buildAndExpand();

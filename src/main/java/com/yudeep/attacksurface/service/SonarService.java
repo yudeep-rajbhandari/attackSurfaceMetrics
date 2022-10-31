@@ -53,10 +53,10 @@ public class SonarService {
         }
     }
 
-    public List<SonarRules> calculate(){
+    public ResponseFinal calculate(String projectKey){
         Map<String,Integer> sonarCount = null;
         List<String> tags = Arrays.asList(new String[]{"cert", "cwe", OWASP});
-        List<SonarIssues> issues = apiService.getAllIssues();
+        List<SonarIssues> issues = apiService.getAllIssues(projectKey);
         List<SonarIssues> filteredIssue = issues.stream().filter(i->tags.stream().anyMatch(i.getTags()::contains)).collect(Collectors.toList());
         List<SonarRules> sonarRules = new ArrayList<>();
         for(SonarIssues sonarIssues:filteredIssue){
@@ -75,12 +75,14 @@ public class SonarService {
 
         calculateCWEConsequence(uniqueSonarRules);
         scoreCVE(uniqueSonarRules);
+        ResponseFinal responseFinal = new ResponseFinal();
 
         double finalScore = finalScoreCalculation(uniqueSonarRules,sonarCount);
+        responseFinal.setFinalScore(finalScore);
 
         LOGGER.log(Level.INFO,() -> String.format("Final Score %1$s", finalScore));
-
-        return uniqueSonarRules;
+        responseFinal.setAllRules(uniqueSonarRules);
+        return responseFinal;
     }
 
     private double finalScoreCalculation(List<SonarRules> uniqueSonarRules, Map<String, Integer> sonarCount) {

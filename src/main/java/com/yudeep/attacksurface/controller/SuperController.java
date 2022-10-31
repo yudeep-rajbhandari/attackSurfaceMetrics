@@ -2,6 +2,7 @@ package com.yudeep.attacksurface.controller;
 
 import com.yudeep.attacksurface.entity.CVEScore;
 import com.yudeep.attacksurface.entity.Consequence;
+import com.yudeep.attacksurface.entity.ResponseFinal;
 import com.yudeep.attacksurface.entity.SonarRules;
 import com.yudeep.attacksurface.service.ApiService;
 import com.yudeep.attacksurface.service.MetricsCalculator;
@@ -28,8 +29,8 @@ public class SuperController {
     private ApiService apiService;
 
     @GetMapping("/getAllIssues")
-    public List<SonarRules> process(){
-        return    sonarService.calculate();
+    public ResponseFinal processScore(@RequestParam String projectKey){
+        return    sonarService.calculate(projectKey);
     }
 
     @GetMapping("/getOWASP")
