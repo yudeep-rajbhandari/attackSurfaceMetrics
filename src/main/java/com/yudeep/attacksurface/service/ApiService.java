@@ -36,9 +36,9 @@ public class ApiService {
     private final static Logger LOGGER =
             Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
-    public List<SonarIssues> getAllIssues(String target){
+    public List<SonarIssues> getAllIssues(String target,Integer page){
         List<SonarIssues> issues = new ArrayList<>();
-        Sonar sonar = restTemplate.getForObject(apiAddress+"/api/issues/search?componentKeys="+target, Sonar.class);
+        Sonar sonar = restTemplate.getForObject(apiAddress+"/api/issues/search?componentKeys="+target+"&ps=500&p="+page, Sonar.class);
         if(sonar !=null){
             issues.addAll(sonar.getSonarIssues());
 
@@ -93,6 +93,10 @@ public class ApiService {
         HttpEntity<String> requestEntity = new HttpEntity<>(headers);
         UriComponents builder = UriComponentsBuilder.fromHttpUrl(nodeAddress+"/observed/"+id).buildAndExpand();
         ResponseEntity<String> rules = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,requestEntity,String.class);
-        return new JSONArray(rules.getBody());
+        if(rules.getBody() != null){
+            return new JSONArray(rules.getBody());
+        }
+        return new JSONArray();
+
     }
 }

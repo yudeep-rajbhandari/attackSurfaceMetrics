@@ -56,7 +56,21 @@ public class SonarService {
     public ResponseFinal calculate(String projectKey){
         Map<String,Integer> sonarCount = null;
         List<String> tags = Arrays.asList(new String[]{"cert", "cwe", OWASP});
-        List<SonarIssues> issues = apiService.getAllIssues(projectKey);
+        List<SonarIssues> issues =new ArrayList<>();
+        int t = 1;
+        while (true){
+            if(t==21){
+                break;
+            }
+            List<SonarIssues> issues1 = apiService.getAllIssues(projectKey,t);
+            if (issues1.isEmpty()){
+                break;
+            }
+            t++;
+            issues.addAll(issues1);
+        }
+
+
         List<SonarIssues> filteredIssue = issues.stream().filter(i->tags.stream().anyMatch(i.getTags()::contains)).collect(Collectors.toList());
         List<SonarRules> sonarRules = new ArrayList<>();
         for(SonarIssues sonarIssues:filteredIssue){
@@ -78,9 +92,13 @@ public class SonarService {
         ResponseFinal responseFinal = new ResponseFinal();
 
         double finalScore = finalScoreCalculation(uniqueSonarRules,sonarCount);
-        responseFinal.setFinalScore(finalScore);
+        responseFinal.setUnweightedScore(finalScore);
+        double finalScore1= 0;
+        finalScore1 = finalScore/sonarCount.values().stream().reduce(0, Integer::sum);
+        finalScore1 = finalScore1/300;
+        responseFinal.setFinalScore(finalScore1);
 
-        LOGGER.log(Level.INFO,() -> String.format("Final Score %1$s", finalScore));
+//        LOGGER.log(Level.INFO,() -> String.format("Final Score %1$s", finalScore));
         responseFinal.setAllRules(uniqueSonarRules);
         return responseFinal;
     }
@@ -94,10 +112,9 @@ public class SonarService {
         double finalScore = 0;
         for(SonarRules sonarRules:uniqueSonarRules){
             double j = sonarRules.getScore();
-            finalScore = finalScore+j*sonarCount.get(sonarRules.getKey());
+            finalScore = finalScore+(j*sonarCount.get(sonarRules.getKey()));
         }
-        finalScore = finalScore/sonarCount.values().stream().reduce(0, Integer::sum);
-        finalScore = finalScore/300;
+
         return finalScore;
     }
 
@@ -212,9 +229,12 @@ public class SonarService {
                 List<String> cwes= sonarRules1.getTitle().get("cwe");
                 List<String> cweList = new ArrayList<>();
                 for(String owas:owasp){
-                    String[] a = owas.split(" ");
-                    List<String> cweList1 = getAllOwasps(a[a.length-1]);
-                    cweList.addAll(cweList1);
+                    if (owas.contains("Category")){
+                        String[] a = owas.split(" ");
+                        List<String> cweList1 = getAllOwasps(a[a.length-1]);
+                        cweList.addAll(cweList1);
+                    }
+
                 }
                 for(String c:cwes){
                     cweList.add(c.split("-")[1]);

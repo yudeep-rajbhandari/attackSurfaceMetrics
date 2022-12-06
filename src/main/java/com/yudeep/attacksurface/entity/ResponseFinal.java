@@ -4,6 +4,17 @@ import java.util.List;
 
 public class ResponseFinal {
     private double finalScore;
+
+    private double unweightedScore;
+
+    public double getUnweightedScore() {
+        return unweightedScore;
+    }
+
+    public void setUnweightedScore(double unweightedScore) {
+        this.unweightedScore = unweightedScore;
+    }
+
     private List<SonarRules> allRules;
 
     public double getFinalScore() {
